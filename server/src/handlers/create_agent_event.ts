@@ -1,17 +1,30 @@
+import { db } from '../db';
+import { agentEventsTable } from '../db/schema';
 import { type CreateAgentEventInput, type AgentEvent } from '../schema';
 
 export const createAgentEvent = async (input: CreateAgentEventInput): Promise<AgentEvent> => {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is creating a new agent event (draft action proposal).
-    // Agent events represent actions that agents want to take but need user confirmation.
-    return Promise.resolve({
-        id: crypto.randomUUID(),
+  try {
+    // Insert agent event record
+    const result = await db.insert(agentEventsTable)
+      .values({
         workspace_id: input.workspace_id,
         agent: input.agent,
         action: input.action,
         input: input.input,
-        output: null,
-        status: input.status,
-        created_at: new Date()
-    } as AgentEvent);
+        status: input.status, // Defaults to 'draft' if not provided
+      })
+      .returning()
+      .execute();
+
+    // Return the created agent event with proper typing
+    const agentEvent = result[0];
+    return {
+      ...agentEvent,
+      input: agentEvent.input as Record<string, any>,
+      output: agentEvent.output as Record<string, any> | null,
+    };
+  } catch (error) {
+    console.error('Agent event creation failed:', error);
+    throw error;
+  }
 };
